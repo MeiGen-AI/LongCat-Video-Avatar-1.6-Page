@@ -1,0 +1,2480 @@
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>LongCat-Video-Avatar 1.6</title>
+        <meta name="description" content="LongCat-Video-Avatar 1.6 is an open-source audio-driven video generation model with stronger stability, lip-sync accuracy, consistency, and fast 8-step generation.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#000000">
+        <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1.9.1/css/academicons.min.css">
+
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-9R6G4R5JJQ"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-9R6G4R5JJQ');
+        </script>
+
+        <style>
+.text-prompt-box {
+    width: 100%;
+    /* 让文字区域自动撑满剩余高度 */
+    flex: 1; 
+    display: flex;
+    align-items: center; /* 垂直居中，如果文字很长想靠上，改成 flex-start */
+    justify-content: center; /* 水平居中，如果想靠左，改成 flex-start */
+    padding: 24px;
+    background: transparent;
+    color: #e0e0e0; /* 字体颜色：灰白 */
+    font-family: "Courier New", Courier, monospace; /* 稍微带点代码感，或者保留原来的 Outfit */
+    font-size: 15px;
+    line-height: 1.5;
+    text-align: center; /* 文字居中对齐 */
+    overflow-y: auto; /* 如果文字太长，允许滚动 */
+    box-sizing: border-box;
+}
+
+/* 针对右侧 Audio 下方的小文本框微调 */
+.text-prompt-box.small {
+    padding: 12px 16px;
+    font-size: 13px;
+    border-top: 1px solid #333; /* 分割线 */
+    align-items: center; 
+    min-height: 50px; /* 保证最少有点高度 */
+}
+/* 让左右两块横向排列 */
+.identity-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px; /* 中间留出 40px 的空隙 */
+    align-items: flex-start; /* 顶部对齐 */
+}
+
+/* 每一半占据 1 份空间 (即各占 50% 减去间隙) */
+.identity-half {
+    flex: 1;
+    min-width: 0; /* 防止内容撑破 flex 容器 */
+}
+
+/* 针对原来 text 的微调，让标题在小格子里居中好看点 */
+.identity-half .text {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+/* 【重要】响应式处理：屏幕小于 1024px 时变回上下排列 */
+@media (max-width: 1024px) {
+    .identity-container {
+        flex-direction: column;
+        gap: 60px;
+    }
+}
+
+
+/* Carousel Styles */
+.carousel-container {
+    position: relative;
+    width: 100%;
+    padding: 40px 0 120px 0;}
+
+.carousel-wrapper {
+    overflow: hidden;
+    width: 100%;
+}
+
+.carousel-track {
+    display: flex;
+    transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    padding: 20px 0;
+    align-items: center;
+}
+
+.carousel-item {
+    flex-shrink: 0;
+    /* 1. 调大基础宽度，从 45% 改为 60%，让中间显大 */
+    width: 60%; 
+    /* 2. 减小间距，让它们靠得更紧凑 */
+    margin: 0 1%; 
+    transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    opacity: 0.4;
+    /* 3. 这里的 scale 改小，比如 0.65，让两边看起来更小 */
+    transform: scale(0.65); 
+    filter: blur(2px);
+}
+.carousel-item.active {
+    opacity: 1;
+    /* 4. 激活状态保持原始大小（因为基础宽度已经变大了，所以看起来很大） */
+    transform: scale(1.05);
+    filter: blur(0);
+    z-index: 2;
+    /* 5. 增加阴影强调 */
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
+}
+.carousel-item .video-player {
+    border-radius: 16px;
+    overflow: hidden;
+    background: #222;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.long-video-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 14px 12px;
+    color: rgba(255, 255, 255, 0.9);
+    background: #222;
+    font-size: 14px;
+}
+
+.long-video-speed-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.long-video-speed {
+    padding: 4px 8px;
+    color: #fff;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.video-player.video-portrait {
+    aspect-ratio: 16 / 9;
+    max-height: min(62vh, 520px);
+    align-items: center;
+    justify-content: center;
+    background: #111;
+}
+
+.long-video-player.video-portrait video {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    object-fit: contain;
+}
+
+.long-video-player.video-portrait .long-video-controls {
+    flex: 0 0 auto;
+}
+
+.carousel-item.active .video-player {
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.carousel-nav:hover {
+    background: #fff;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-nav.prev {
+    left: 20px;
+}
+
+.carousel-nav.next {
+    right: 20px;
+}
+
+.carousel-caption {
+    /* --- 核心修改开始 --- */
+    
+    /* 1. 宽度设为 60%，跟你的 .carousel-item 宽度保持一致 */
+    width: 60%; 
+    
+    /* 2. 使用绝对定位 + transform 让这个盒子水平居中 */
+    left: 50%;
+    transform: translateX(-50%);
+    
+    /* 3. 盒子居中后，里面的文字设为左对齐，它就会自然紧贴视频左边缘 */
+    text-align: left;
+    
+    /* 4. 去掉之前的 padding，现在不需要了 */
+    padding: 0;
+    
+    /* --- 核心修改结束 --- */
+
+    /* 高度位置：数字越大越靠上，越小越靠下 */
+    bottom: 40px; 
+
+    /* 其他保持不变 */
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.carousel-caption p {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9); /* 稍微降低一点纯白度，更柔和 */
+    line-height: 1.5;
+    margin: 0;
+    opacity: 0;
+    transition: opacity 0.6s;
+    /* 可选：因为现在是深色背景，可以去掉文字阴影，显得更干净 */
+    /* text-shadow: 0 2px 4px rgba(0,0,0,0.8); */ 
+}
+/* 调整 Dots 的位置，确保在 Caption 下面 */
+.carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 12px; /* 圆点间距稍微拉大一点点 */
+    position: absolute;
+    /* 修改这里：固定在最底部 */
+    bottom: 25px; 
+    left: 0;
+    width: 100%;
+    z-index: 21;
+}
+.carousel-caption p.active {
+    opacity: 1;
+}
+
+/* .carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+} */
+
+.carousel-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.carousel-dot.active {
+    background: #fff;
+    width: 30px;
+    border-radius: 5px;
+}
+
+@media (max-width: 640px) {
+    .carousel-item {
+        width: 80%;
+        margin: 0 10%;
+    }
+    
+    .carousel-nav {
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+    }
+    
+    .carousel-nav.prev {
+        left: 10px;
+    }
+    
+    .carousel-nav.next {
+        right: 10px;
+    }
+    
+    .carousel-caption {
+        padding: 0 5%;
+    }
+    
+    .carousel-caption p {
+        font-size: 14px;
+    }
+}
+
+            @font-face {
+                font-family: 'Raleway';
+                font-style: normal;
+                font-weight: 600;
+                font-display: block;
+                src: url(assets/fonts/raleway_normal_600.woff2) format('woff2');
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+            @font-face {
+                font-family: 'Outfit';
+                font-style: normal;
+                font-weight: 100 900;
+                font-display: block;
+                src: url(assets/fonts/outfit.woff2) format('woff2');
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            :root {
+                --intro-scale: 0
+            }
+
+            body {
+                margin: 0;
+                font-family: "Outfit", sans-serif;
+                background: linear-gradient(180deg, #17191c 0%, #111416 42%, #0d0d0e 100%);
+                color: #fff;
+            }
+
+            .flex {
+                display: flex;
+                gap: 24px;
+                align-items: stretch;
+                justify-content: stretch;
+            }
+            .flex-center {
+                align-items: center;
+            }
+
+            #logo {
+                position: absolute;
+                top: 0;
+                right: calc(50vw - min(45vw, 1600px / 2));
+                z-index: 1;
+                background: rgb(60, 140, 255);
+                padding: 32px 8px 8px 8px;
+                border-radius: 0 0 8px 8px;
+            }
+            #logo svg {
+                width: 40px;
+                height: 40px;
+            }
+
+
+            section {
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                padding: 48px calc(50vw - min(45vw, 1600px / 2));
+            }
+
+            #introduction {
+                background: linear-gradient(180deg, #15191c 0%, #101416 100%);
+            }
+
+            #stability {
+                background: linear-gradient(180deg, #101416 0%, #171917 46%, #111312 100%);
+            }
+
+            #commercial {
+                background: linear-gradient(180deg, #151312 0%, #1a1714 52%, #111111 100%);
+            }
+
+            #commercial .comparison-case + .comparison-case {
+                margin-top: 64px;
+            }
+
+            #commercial .crop-omnihuman-33 video {
+                transform: scale(1.35);
+                transform-origin: center;
+            }
+
+            #version {
+                background: linear-gradient(180deg, #111111 0%, #151619 48%, #0e1012 100%);
+            }
+
+            #creative-showcase {
+                background: linear-gradient(180deg, #111312 0%, #17151b 52%, #111214 100%);
+            }
+            .creative-layout {
+                display: block;
+            }
+            .creative-parts {
+                display: flex;
+                gap: 10px;
+                overflow-x: auto;
+                margin-bottom: 28px;
+                padding-bottom: 8px;
+                scrollbar-width: thin;
+            }
+            .creative-part {
+                flex: 1 0 140px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                padding: 14px 16px;
+                background: rgba(255, 255, 255, 0.035);
+                color: #aeb2bd;
+                font: inherit;
+                text-align: center;
+                cursor: pointer;
+                transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s;
+            }
+            .creative-part:hover {
+                color: #fff;
+                border-color: rgba(255, 255, 255, 0.28);
+                transform: translateY(-2px);
+            }
+            .creative-part[aria-selected="true"] {
+                color: #fff;
+                border-color: rgba(112, 172, 255, 0.65);
+                background: linear-gradient(135deg, rgba(71, 132, 255, 0.25), rgba(128, 79, 255, 0.12));
+            }
+            .creative-part small {
+                display: block;
+                margin-bottom: 3px;
+                color: #747b88;
+                font-size: 11px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .creative-part[aria-selected="true"] small {
+                color: #9fc5ff;
+            }
+            .creative-panel[hidden] {
+                display: none;
+            }
+            .creative-panel-header {
+                margin-bottom: 22px;
+            }
+            .creative-panel-header h2 {
+                margin: 0 0 8px;
+                font-size: 26px;
+                font-weight: 400;
+            }
+            .creative-panel-header p {
+                margin: 0;
+                max-width: 760px;
+            }
+            #creative-showcase .creative-demo-grid {
+                display: flex;
+                gap: 18px;
+                overflow-x: auto;
+                justify-content: flex-start;
+                align-items: start;
+                padding-bottom: 12px;
+                scroll-snap-type: x mandatory;
+                scrollbar-width: thin;
+            }
+            #creative-showcase .creative-demo-grid .video-player {
+                flex: 0 0 100%;
+                width: 100%;
+                height: min(62vh, 620px);
+                aspect-ratio: auto;
+                max-height: none;
+                align-items: center;
+                justify-content: center;
+                background: #000;
+                scroll-snap-align: center;
+                scroll-snap-stop: always;
+            }
+            #creative-showcase .creative-demo-grid .video-player video {
+                width: auto;
+                height: 100%;
+                max-width: 100%;
+                object-fit: contain;
+            }
+            .creative-slider {
+                position: relative;
+            }
+            .creative-nav {
+                position: absolute;
+                top: 50%;
+                z-index: 4;
+                width: 48px;
+                height: 48px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                background: rgba(8, 10, 13, 0.78);
+                color: #fff;
+                font-size: 34px;
+                line-height: 1;
+                cursor: pointer;
+                transform: translateY(-50%);
+                backdrop-filter: blur(8px);
+                transition: opacity 0.2s ease, background 0.2s ease;
+            }
+            .creative-nav:hover:not(:disabled) {
+                background: rgba(65, 95, 160, 0.88);
+            }
+            .creative-nav:disabled {
+                opacity: 0.22;
+                cursor: default;
+            }
+            .creative-nav.prev {
+                left: 18px;
+            }
+            .creative-nav.next {
+                right: 18px;
+            }
+            .creative-demo-grid:empty::after {
+                content: attr(data-empty);
+                display: grid;
+                place-items: center;
+                min-height: 300px;
+                grid-column: 1 / -1;
+                border: 1px dashed rgba(255, 255, 255, 0.16);
+                border-radius: 16px;
+                color: #777d88;
+                background: rgba(255, 255, 255, 0.025);
+                text-align: center;
+                padding: 28px;
+            }
+
+            .text {
+                margin-bottom: 50px;
+            }
+
+            #intro {
+                text-align: center;
+                height: 100vh;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border: none;
+            }
+
+            #intro .content {
+                top: 0;
+                left: 0;
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            #intro .background-video {
+                width: calc(100vw * (1 - var(--intro-scale)) + min(90vw, 1600px) * var(--intro-scale));
+                height: calc(100vh * (1 - var(--intro-scale)) + 90vh * var(--intro-scale));
+                border-radius: calc(0px * (1 - var(--intro-scale)) + 16px * var(--intro-scale));
+                overflow: hidden;
+            }
+            #intro video {
+                width: calc(100% + 20px);
+                height: calc(100% + 20px);
+                margin-left: -10px;
+                margin-top: -10px;
+                object-fit: cover;
+                filter: brightness(50%) blur(10px);
+            }
+
+            #intro h1 {
+                font-size: 60px;
+                margin: 100px 0 20px 0;
+                font-family: "Raleway", sans-serif;
+                font-optical-sizing: auto;
+                font-weight: 600;
+                font-style: normal;
+            }
+
+            #intro h2 {
+                margin: 20px 0 40px 0;
+                font-size: 20px;
+                font-weight: 200;
+            }
+
+            #intro h3 {
+                margin: 20px 0 40px 0;
+                font-size: 40px;
+                font-weight: 200;
+            }
+
+            #t2v {
+                border: none;
+            }
+            #t2v .text:not(:first-of-type) {
+                margin-top: 48px;
+            }
+            #t2v .feature-video {
+                aspect-ratio: 21 / 9;
+            }
+            #introduction .feature-video {
+                aspect-ratio: 16 / 9;
+                max-width: 960px;
+                margin: 0 auto;
+                border-radius: 16px;
+                overflow: hidden;
+                background: #222;
+            }
+            .feature-video {
+                position: relative;
+            }
+            .feature-video .cover {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0,0,0,0.5);
+                backdrop-filter: blur(10px);
+                text-align: center;
+                transition: backdrop-filter 0.5s;
+                cursor: pointer;
+                z-index: 1;
+            }
+            .feature-video .button {
+                width: 64px;
+                height: 64px;
+                border-radius: 32px;
+                background-color: #fff;
+                background-image: url(assets/icons/play.svg);
+                background-position: center;
+                background-repeat: no-repeat;
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+                margin: 32px auto 0 auto;
+                transition: box-shadow 0.5s;
+            }
+            .feature-video .cover:hover .button {
+                box-shadow: 0 0 35px rgba(0, 0, 0, 0.5);
+            }
+            .feature-video video {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
+            .feature-video video.final-video {
+                object-fit: contain;
+                opacity: 0;
+            }
+
+            h1 {
+                font-size: 32px;
+                font-weight: 400;
+                margin: 0;
+            }
+            p {
+                font-size: 16px;
+                color: #b9bbc6;
+                line-height: 25px;
+                font-weight: 300;
+            }
+
+            .grid {
+                display: grid;
+                grid-gap: 16px;
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+            .grid2 {
+                display: grid;
+                grid-gap: 16px;
+                grid-template-columns: 1fr 1fr;
+            }
+            .grid3 {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .grid4 {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .grid4r {
+                display: grid;
+                grid-gap: 16px;
+                grid-template-columns: 1fr 1fr 1fr 1fr;
+            }
+            .grid5 {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            /* .video-player {
+                width: 100%;
+                display: flex;
+                justify-content: stretch;
+                align-items: stretch;
+                position: relative;
+                border-radius: 16px;
+                overflow: hidden;
+                background: #222;
+            } */
+            .video-player {
+                width: 100%;
+                display: flex;
+                flex-direction: column; /* Stack children vertically */
+                align-items: stretch;
+                position: relative;
+                border-radius: 16px;
+                overflow: hidden;
+                background: #222;
+                gap: 8px; /* Space between video and caption */
+            }
+
+            .video-player video {
+                width: 100%;
+                display: block;
+                flex-shrink: 0; /* Prevent video from shrinking */
+            }
+
+            #version .video-player {
+                aspect-ratio: 16 / 9;
+            }
+
+            #version .video-player video {
+                height: 100%;
+                object-fit: cover;
+            }
+
+            #version .version-case3 .video-player video,
+            #version .version-case4 .video-player video {
+                object-fit: contain;
+            }
+
+            .uniform-video-grid .video-player {
+                aspect-ratio: 16 / 9;
+            }
+
+            .uniform-video-grid .video-player video {
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .video-caption {
+                padding: 0 12px 12px;
+                color: #fff;
+                font-size: 14px;
+                text-align: center;
+                line-height: 1.4;
+            }
+
+            .video-caption {
+                text-align: center;
+                font-size: 16px;
+                color: #666;
+                border-top: 1px solid #ddd;
+                padding: 10px 0;
+            }
+            video {
+                width: 100%;
+                object-fit: cover;
+            }
+            .span12 {
+                grid-row: span 2;
+            }
+            .span22 {
+                grid-column: span 2;
+                grid-row: span 2;
+            }
+            .span21 {
+                grid-column: span 2;
+            }
+            #i2v .author {
+                position: absolute;
+                left: 16px;
+                top: 16px;
+                font-size: 10px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                background: rgba(0,0,0,0.5);
+                opacity: 0;
+                transition: opacity 0.5s;
+            }
+            #i2v .video-player:hover .author {
+                opacity: 1;
+            }
+            #i2v2 {
+                padding-top: 0;
+                border: none;
+            }
+            #i2v2 .page-control {
+                margin-bottom: 48px;
+            }
+            #i2v2 .page-content .video-player {
+                aspect-ratio: 448 / 800;
+            }
+
+            .page-select {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 4px;
+                margin: 8px 0 16px 0;
+            }
+            .page-select > div {
+                padding: 8px 16px;
+                border-radius: 100px;
+                cursor: pointer;
+                transition: background-color 0.5s, color 0.5s;
+                background: rgba(0,0,0,0.25);
+            }
+            .page-select > div:hover {
+                background-color: rgba(0,0,0,0.5);
+            }
+            .page-select > div[selected=true] {
+                background-color: #fff;
+                color: #000;
+            }
+            .page-content > div:not([selected=true]) {
+                display: none;
+            }
+
+            #long {
+                background: linear-gradient(75deg, #524037, #282025);
+            }
+            #long .text {
+                width: 30%;
+                flex-shrink: 0;
+            }
+            #shots {
+                padding-top: 0;
+                padding-bottom: 0;
+                background: linear-gradient(180deg, #222a2d, #121a1d);
+            }
+            #singer {
+                padding-top: 0;
+                padding-bottom: 0;
+                background: rgba(0,0,0,0.5);
+            }
+            
+            #podcast {
+                padding-top: 0;
+                padding-bottom: 0;
+                background: rgba(0, 0, 0, 0.648);
+            }
+            #sales {
+                padding-top: 0;
+                padding-bottom: 0;
+                background: rgba(0, 0, 0, 0.407);
+            }
+            #multiperson {
+                padding-top: 0;
+                padding-bottom: 0;
+                background: rgba(0, 0, 0, 0.302);
+            }
+
+            #shots video {
+                aspect-ratio: 872 / 480;
+            }
+            #shots .main {
+                position: sticky;
+                top: 0;
+                max-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 40px 0;
+            }
+            #shots > .flex {
+                align-items: stretch;
+            }
+            .shots-list {
+                padding: 64px 0;
+                width: 30%;
+                min-width: 300px;
+                flex-shrink: 0;
+                position: relative;
+                scrollbar-width: none;
+            }
+            .shots-list > div {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                border-radius: 8px;
+                padding-right: 16px;
+                cursor: pointer;
+                white-space: nowrap;
+                transition: background-color 0.5s;
+            }
+            .shots-list p {
+                font-size: 14px;
+            }
+            .shots-list > div:not(:last-of-type) {
+                margin-bottom: 8px;
+            }
+            .shots-list > div[selected] {
+                background:rgba(0, 0, 0, 0.5)
+            }
+            .shots-list > div:hover {
+                background:rgba(255, 255, 255, 0.2)
+            }
+            .shots-list img {
+                width: 80px;
+                border-radius: 8px;
+                aspect-ratio: 872 / 480;
+            }
+            .shots-list h6 {
+                margin: 4px 0 0 0;
+            }
+            .shots-list p {
+                margin: 0;
+            }
+
+            @media (min-height: 1024px) {
+                #shots {
+                    padding-top: 0;
+                    padding-bottom: 0;
+                }
+                .shots-list {
+                    max-height: 900px;
+                    overflow: scroll;
+                }
+            }
+
+            #audio, #avatar {
+                background: #202820;
+            }
+
+            #identity {
+                background: #2f2820;
+            }
+
+            #real-time {
+                background: #000;
+            }
+
+
+            .audio-control {
+                transition: transform 0.5s, box-shadow 0.5s;
+            }
+            .audio-button {
+                width: 64px;
+                height: 64px;
+                border-radius: 32px;
+                position: absolute;
+                right: 32px;
+                bottom: 32px;
+                transition: box-shadow 0.5s, opacity 0.5s;
+                cursor: pointer;
+                background-color: #fff;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-size: 32px;
+                background-image: url(assets/icons/mute.svg);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                z-index: 2;
+            }
+            body[muted=false] .audio-button {
+                background-image: url(assets/icons/unmute.svg);
+            }
+            @media (min-width: 640px) {
+                body[muted=false] .audio-control:hover {
+                    transform: scale(1.05);
+                    z-index: 1;
+                    box-shadow: 0 0 32px rgba(0,0,0,0.8);
+                }
+                .audio-control .audio-button {
+                    opacity: 0;
+                }
+                .audio-control:hover .audio-button {
+                    opacity: 1;
+                }
+                .audio-control .audio-button:hover {
+                    background-color: #fff;
+                    border: none;
+                    box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+                }
+                .audio-button-mobile {
+                    display: none;
+                }
+
+                .mobile-only {
+                    display: none !important;
+                }
+            }
+            .duration-indicator {
+                position: relative;
+            }
+            .duration-indicator .bar {
+                position: absolute;
+                bottom: 16px;
+                left: 32px;
+                width: calc(100% - 64px);
+                height: 4px;
+                border-radius: 100px;
+                background: rgba(255,255,255,0.5);
+                overflow: hidden;
+                transition: opacity 0.5s;
+            }
+            .duration-indicator .barinner {
+                height: 100%;
+                width: 0;
+                background: #fff;
+            }
+
+            .duration-indicator .time {
+                position: absolute;
+                right: 32px;
+                bottom: 24px;
+                transition: opacity 0.5s;
+                font-size: 14px;
+            }
+
+            #super-resolution {
+                background: linear-gradient(75deg, #282838, #222233)
+            }
+            #super-resolution .text {
+                max-width: 30%;
+            }
+
+            .video-slider {
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                background: #222;
+                border-radius: 16px;
+                overflow: hidden;
+                position: relative;
+            }
+            .video-slider .video1,
+            .video-slider .video2 {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                background: #222;
+            }
+            .video-slider .video1 {
+                width: 50%;
+                border-right: 3px solid #fff;
+                z-index: 2;
+            }
+            .video-slider .button {
+                width: 64px;
+                height: 64px;
+                border-radius: 32px;
+                background-color: #fff;
+                background-image: url(assets/icons/drag.svg);
+                background-position: center;
+                background-repeat: no-repeat;
+                position: absolute;
+                transition: box-shadow 0.5s, opacity 0.5s;
+                z-index: 3;
+                opacity: 0.5;
+            }
+            .video-slider:hover .button {
+                opacity: 1;
+            }
+            .video-slider .button:hover {
+                box-shadow: 0 2px 15px rgba(0,0,0,0.5);
+            }
+            .video-slider .slider {
+                background-image: url(assets/icons/drag.svg);
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                cursor: grab;
+            }
+            .video-slider video {
+                width: auto;
+                height: 100%;
+            }
+            .video-slider .label {
+                display: inline-block;
+                position: absolute;
+                top: 32px;
+                font-size: 14px;
+                font-weight: 600;
+                background-color: #fff;
+                border-radius: 4px;
+                opacity: 0.75;
+                color: #000;
+                padding: 4px 8px;
+                user-select: none;
+            }
+            .video-slider .video1 .label {
+                left: 32px
+            }
+            .video-slider .video2 .label {
+                right: 32px
+            }
+            .video-slider .fullscreen {
+                background-image: url(assets/icons/fullscreen.svg);
+                opacity: 0;
+                bottom: 32px;
+                right: 32px;
+            }
+            body[fullscreen] .video-slider .fullscreen {
+                background-image: url(assets/icons/fullscreen-exit.svg);
+            }
+
+            #camera-control .grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            #camera-control h6 {
+                margin: 8px 0;
+                z-index: 1;
+            }
+            #camera-control .video-player,
+            #world-explore .video-player {
+                aspect-ratio: 16 / 9;
+            }
+
+            #camera-control {
+                background: linear-gradient(90deg, #252820, #102028);
+            }
+
+            #world-explore {
+                background: linear-gradient(90deg, #252820, #152028);
+            }
+            
+            #synthetic {
+                padding-bottom: 80px;
+                background: linear-gradient(#102028, #000);
+            }
+
+            #synthetic .flex {
+                gap: 16px;
+            }
+
+            #team {
+                background: linear-gradient(180deg, #0e1012 0%, #090a0b 100%);
+                text-align: center;
+                padding: 80px 16px 160px 16px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border: none;
+            }
+            #team .content {
+                width: 100%;
+            }
+            #team .flex {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            #team h3 {
+                font-size: 20px;
+                font-weight: 400;
+                margin-top: 80px;
+                margin-bottom: 8px;
+            }
+            #team h4 {
+                font-size: 17px;
+                font-weight: 400;
+                margin-top: 32px;
+                margin-bottom: 8px;
+            }
+            #team h6 {
+                font-weight: 200;
+                margin: 0;
+                opacity: 0.8;
+            }
+            #team ul {
+                padding: 0;
+                margin: 0;
+                min-width: 250px;
+            }
+            #team li,
+            #team p {
+                font-size: 17px;
+                font-weight: 200;
+                line-height: 28px;
+                list-style-type: none;
+                text-wrap: balance;
+            }
+            #team p {
+                max-width: 1600px;
+                color: #fff;
+                margin: 16px auto 0 auto;
+            }
+            #team p span {
+                text-wrap: nowrap;
+            }
+
+            a.external {
+                border-radius: 100px;
+                text-decoration: none;
+                padding: 8px 16px;
+                cursor: pointer;
+                transition: background-color 0.5s, color 0.5s;
+                color: #b9bbc6;
+                font-size: 14px;
+                margin-top: 8px;
+                margin-bottom: -24px;
+                display: inline-block;
+                background: rgba(0,0,0,0.3);
+            }
+            a.external:hover {
+                background: rgba(255,255,255,1) !important;
+                color: #000;
+            }
+            #real-time a.external {
+                background: rgba(255,255,255,0.1);
+            }
+            #shots a.external {
+                margin-bottom: 0;
+            }
+
+            .paper-button {
+                padding-right: 16px;
+                border-radius: 8px;
+                color: #fff;
+                background-color: rgba(128,128,128,0.3);
+                cursor: pointer;
+                transition: background-color 0.5s;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                overflow: hidden;
+            }
+
+            .paper-button .icon {
+                box-sizing: content-box;
+                padding: 8px;
+                background-color: rgba(255,255,255,0.7);
+                margin-right: 16px;
+                transition: background-color 0.5s;
+                width: 20px;
+                height: 20px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                line-height: 1;
+                flex-shrink: 0;
+            }
+
+            .paper-button .icon i {
+                width: 20px;
+                height: 20px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .paper-button:hover {
+                background-color: #fff;
+                color: #000;
+            }
+            .paper-button:hover .icon {
+                background-color: #fff;
+            }
+
+            @media (max-width: 640px) {
+                #intro h1 {
+                    font-size: 64px;
+                }
+                #intro .background-video {
+                    width: calc(100vw * (1 - var(--intro-scale)) + (100vw - 32px) * var(--intro-scale));
+                }
+
+                h1 {
+                    font-size: 24px;
+                }
+
+                section {
+                    padding: 32px 16px;
+                    position: relative;
+                }
+
+                .creative-layout {
+                    display: block;
+                }
+                .creative-parts {
+                    width: calc(100vw - 16px);
+                    padding: 0 16px 8px 0;
+                    scrollbar-width: none;
+                }
+                .creative-part {
+                    min-width: 150px;
+                    flex: 0 0 auto;
+                }
+                .creative-demo-grid:empty::after {
+                    min-height: 220px;
+                }
+                #creative-showcase .creative-demo-grid {
+                    justify-content: flex-start;
+                    gap: 12px;
+                    scrollbar-width: none;
+                }
+                #creative-showcase .creative-demo-grid .video-player {
+                    flex-basis: 100%;
+                    width: 100%;
+                    height: min(62vh, 520px);
+                }
+                #creative-showcase .creative-demo-grid .video-player video {
+                    width: auto;
+                    height: 100%;
+                }
+                #creative-showcase .creative-demo-grid .video-player.video-portrait {
+                    width: 100%;
+                }
+                #creative-showcase .creative-demo-grid .video-player.video-portrait video {
+                    width: auto;
+                    height: 100%;
+                }
+                .creative-nav {
+                    width: 42px;
+                    height: 42px;
+                    font-size: 30px;
+                }
+                .creative-nav.prev {
+                    left: 8px;
+                }
+                .creative-nav.next {
+                    right: 8px;
+                }
+
+                .grid {
+                    gap: 4px;
+                }
+                .flex {
+                    gap: 4px !important;
+                }
+
+                .flex-mobile {
+                    display: block;
+                }
+
+                #t2v .feature-video {
+                    aspect-ratio: 1;
+                    max-height: calc(100vh - 64px);
+                }
+
+                #long .text,
+                #super-resolution .text {
+                    width: 100%;
+                    max-width: 100%;
+                }
+                #shots {
+                    padding: 32px 16px;
+                }
+                #shots .main {
+                    position: relative;
+                    padding: 0 0 16px 0;
+                }
+                #shots .shots-list {
+                    display: flex;
+                    overflow-x: scroll;
+                    gap: 4px;
+                    width: 100vw;
+                    margin: 0 0 0 -16px;
+                    padding: 0 16px;
+                    scroll-snap-type: x mandatory;
+                }
+                #shots .shots-list > div {
+                    scroll-snap-align: start;
+                    scroll-margin: 16px;
+                }
+
+                .grid:not(.grid-noslide) {
+                    display: flex;
+                    overflow-x: scroll;
+                    width: 100vw;
+                    margin-left: -16px;
+                    padding: 0 16px;
+                    scroll-snap-type: x mandatory;
+                    scrollbar-width: none;
+                }
+                .grid:not(.grid-noslide) > * {
+                    width: calc(100vw - 64px);
+                    max-height: calc(100vh - 64px);
+                    flex-shrink: 0;
+                    scroll-snap-align: center;
+                    scroll-snap-stop: always;
+                    scroll-margin: 16px;
+                }
+                .grid:not(.grid-noslide) .video-player:not(:first-of-type),
+                .grid:not(.grid-noslide) *:not(:first-of-type) .video-player {
+                    border-top-left-radius: 0;
+                    border-bottom-left-radius: 0;
+                }
+                .grid:not(.grid-noslide) .video-player:not(:last-of-type),
+                .grid:not(.grid-noslide) *:not(:last-of-type) .video-player {
+                    border-top-right-radius: 0;
+                    border-bottom-right-radius: 0;
+                }
+
+                .audio-control .audio-button {
+                    display: none;
+                }
+                .audio-button-mobile {
+                    right: 48px;
+                    bottom: 48px;
+                }
+                section:has(a.external) .audio-button-mobile {
+                    bottom: 96px;
+                }
+
+                .duration-indicator .bar {
+                    left: 16px;
+                    bottom: 8px;
+                    width: calc(100% - 32px);
+                }
+                .duration-indicator .time {
+                    right: 16px;
+                    bottom: 16px;
+                }
+
+                #synthetic .grid {
+                    border-radius: 16px;
+                    overflow: hidden;
+                }
+                #synthetic .video-player {
+                    border-radius: 0;
+                }
+                #synthetic .flex > div:last-child {
+                    display: none;
+                }
+
+                section:has(a.external) {
+                    padding-bottom: 80px !important;
+                }
+                a.external {
+                    position: absolute;
+                    bottom: 48px;
+                    left: 16px;
+                    width: calc(100vw - 32px);
+                    text-align: center;
+                }
+
+                #shots a.external {
+                    position: inherit;
+                    margin: 8px 0;
+                }
+                #shots {
+                    padding-bottom: 24px !important;
+                }
+
+                .desktop-only {
+                    display: none !important;
+                }
+
+                #synthetic a.external {
+                    background: rgba(255,255,255,0.1);
+                }
+
+                .page-select {
+                    justify-content: space-evenly;
+                    overflow: scroll;
+                    margin-left: -16px;
+                    margin-right: -16px;
+                    padding-left: 16px;
+                    padding-right: 16px;
+                    scrollbar-width: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- <div id="logo">
+            <svg viewBox="1.37 0 1198.25 1051.64" xmlns="http://www.w3.org/2000/svg"><path d="m206.82 943.8-205.45 52.74v-941.44l205.45 53.14z" fill="#fff"/><path d="m532.79 972.14-205.44 53.13v-554.55l205.44 53.13z" fill="#fff"/><path d="m667.02 388.86 205.84-53.14v554.55l-205.84-53.13z" fill="#fff"/><path d="m1199.62 998.9-205.84 52.74v-1051.64l205.84 53.13z" fill="#fff"/></svg>
+        </div> -->
+            <section id="intro">
+                <div class="background-video">
+                    <video muted loop playsinline preload="none" src="videos/background/background.mp4"></video>
+                </div>
+                <div class="content">
+                    <div class="text">
+                        <!-- <h3>MeiGen-LongCat-Video-Avatar</h3> -->
+                        <h1>LongCat-Video-Avatar 1.6</h1>
+                        <div class="is-size-5 publication-authors">
+                            Meituan LongCat Team
+                        </div>
+                        <br>
+        
+                        <a class="paper-button" href="https://arxiv.org/abs/2605.26486" target="_blank" rel="noopener noreferrer">
+                            <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                            <span>Technique Report</span>
+                        </a>
+                        <a class="paper-button" href="https://github.com/meituan-longcat/LongCat-Video" target="_blank" rel="noopener noreferrer">
+                            <span class="icon"><i class="fab fa-github"></i></span>
+                            <span>Code</span>
+                        </a>
+                        <a class="paper-button" href="https://huggingface.co/meituan-longcat/LongCat-Video-Avatar-1.6" target="_blank" rel="noopener noreferrer">
+                            <span class="icon">🤗</span>
+                            <span>Hugging Face</span>
+                        </a>
+                        <p style="font-style: italic;">An expressive avatar model built upon LongCat-Video</p>
+                    </div>
+                </div>
+            </section>
+        
+            <section id="introduction">
+                <div class="text">
+                    <h1>Introduction Video</h1>
+                    <p>
+                        Introduce what LongCat-Video-Avatar 1.6 is, how it improves upon the 1.5 release, and how the model combines stable avatar generation with practical inference speed.
+                    </p>
+                </div>
+                <div class="feature-video audio-control" data-video-slot="introduction-main">
+                    <video muted loop playsinline preload="auto" src="videos/introduction/2.mp4"></video>
+                    
+                </div>
+            </section>
+        
+            <section id="stability">
+                <div class="text">
+                    <h1>Reduced Error Accumulation in Long-Video Generation</h1>
+                    <p>
+                        Show how LongCat-Video-Avatar 1.6 reduces error accumulation over long talking sequences while preserving facial identity, natural speech-related mouth motion, body structure, hand-object interactions, and temporal consistency.
+                    </p>
+                </div>
+        
+                <div class="carousel-container" id="carousel-stability">
+                    <button class="carousel-nav prev">‹</button>
+                    <div class="carousel-wrapper">
+                        <div class="carousel-track">
+                            <div class="carousel-item" data-caption="">
+                                <div class="video-player long-video-player">
+                                    <video class="no-autoplay" muted controls playsinline preload="metadata" src="videos/long_video/1_v2.mp4?v=crf17-v2-20261110"></video>
+                                    <div class="long-video-controls">
+                                        <span class="long-video-time">0:00 / --:--</span>
+                                        <label class="long-video-speed-label">Speed
+                                            <select class="long-video-speed" aria-label="Playback speed">
+                                                <option value="1">1×</option>
+                                                <option value="1.5">1.5×</option>
+                                                <option value="2">2×</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="carousel-item" data-caption="">
+                                <div class="video-player long-video-player">
+                                    <video class="no-autoplay" muted controls playsinline preload="metadata" src="videos/long_video/2_v2.mp4?v=crf17-v2-20261110"></video>
+                                    <div class="long-video-controls">
+                                        <span class="long-video-time">0:00 / --:--</span>
+                                        <label class="long-video-speed-label">Speed
+                                            <select class="long-video-speed" aria-label="Playback speed">
+                                                <option value="1">1×</option>
+                                                <option value="1.5">1.5×</option>
+                                                <option value="2">2×</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="carousel-item" data-caption="">
+                                <div class="video-player long-video-player">
+                                    <video class="no-autoplay" muted controls playsinline preload="metadata" src="videos/long_video/3_v2.mp4?v=crf18p7-v2-20261110"></video>
+                                    <div class="long-video-controls">
+                                        <span class="long-video-time">0:00 / --:--</span>
+                                        <label class="long-video-speed-label">Speed
+                                            <select class="long-video-speed" aria-label="Playback speed">
+                                                <option value="1">1×</option>
+                                                <option value="1.5">1.5×</option>
+                                                <option value="2">2×</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="carousel-item" data-caption="">
+                                <div class="video-player long-video-player">
+                                    <video class="no-autoplay" muted controls playsinline preload="metadata" src="videos/long_video/4.mp4?v=10min-0001"></video>
+                                    <div class="long-video-controls">
+                                        <span class="long-video-time">0:00 / --:--</span>
+                                        <label class="long-video-speed-label">Speed
+                                            <select class="long-video-speed" aria-label="Playback speed">
+                                                <option value="1">1×</option>
+                                                <option value="1.5">1.5×</option>
+                                                <option value="2">2×</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="carousel-item" data-caption="">
+                                <div class="video-player long-video-player">
+                                    <video class="no-autoplay" muted controls playsinline preload="metadata" src="videos/long_video/5.mp4?v=10min-0004"></video>
+                                    <div class="long-video-controls">
+                                        <span class="long-video-time">0:00 / --:--</span>
+                                        <label class="long-video-speed-label">Speed
+                                            <select class="long-video-speed" aria-label="Playback speed">
+                                                <option value="1">1×</option>
+                                                <option value="1.5">1.5×</option>
+                                                <option value="2">2×</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="carousel-nav next">›</button>
+                    <div class="carousel-caption"></div>
+                    <div class="carousel-dots"></div>
+                </div>
+            </section>
+
+            <section id="creative-showcase">
+                <div class="text">
+                    <h1>Beyond Speech: Music, Performance, and More</h1>
+                    <p>
+                        Explore LongCat-Video-Avatar 1.6 across diverse expressive scenarios, including music, singing, live performance, character interaction, and creative animation.
+                    </p>
+                </div>
+
+                <div class="creative-layout">
+                    <nav class="creative-parts" role="tablist" aria-label="Creative demo categories">
+                        <button class="creative-part" type="button" role="tab" aria-selected="true" data-creative-part="music"><small>Part 01</small>Music</button>
+                        <button class="creative-part" type="button" role="tab" aria-selected="false" data-creative-part="performance"><small>Part 02</small>Performance</button>
+                        <button class="creative-part" type="button" role="tab" aria-selected="false" data-creative-part="speech"><small>Part 03</small>Speech</button>
+                        <button class="creative-part" type="button" role="tab" aria-selected="false" data-creative-part="expression"><small>Part 04</small>Expression</button>
+                        <button class="creative-part" type="button" role="tab" aria-selected="false" data-creative-part="live"><small>Part 05</small>Live Streaming</button>
+                        <button class="creative-part" type="button" role="tab" aria-selected="false" data-creative-part="animation"><small>Part 06</small>Animation</button>
+                        <button class="creative-part" type="button" role="tab" aria-selected="false" data-creative-part="interaction"><small>Part 07</small>Interaction</button>
+                    </nav>
+                    <div class="creative-panels">
+                        <article class="creative-panel" role="tabpanel" data-creative-panel="music">
+                            <div class="grid grid3 uniform-video-grid creative-demo-grid">
+                                <div class="video-player audio-control" data-video-slot="creative-music-1">
+                                    <video muted loop playsinline preload="none" src="videos/creative/music/1.mp4?v=sing-selected17-v3-20261106-0-12s"></video>
+                                </div>
+                                <div class="video-player audio-control" data-video-slot="creative-music-2">
+                                    <video muted loop playsinline preload="none" src="videos/creative/music/2.mp4?v=sing-selected17-v3-man-18s-20261106"></video>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="creative-panel" role="tabpanel" data-creative-panel="performance" hidden>
+                            <div class="grid grid3 uniform-video-grid creative-demo-grid">
+                                <div class="video-player audio-control" data-video-slot="creative-performance-1">
+                                    <video muted loop playsinline preload="none" src="videos/creative/performance/1.mp4?v=talk-woman-0032-11p2s"></video>
+                                </div>
+                                <div class="video-player audio-control" data-video-slot="creative-performance-2">
+                                    <video muted loop playsinline preload="none" src="videos/creative/performance/2.mp4?v=trim-10p48s-20261109"></video>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="creative-panel" role="tabpanel" data-creative-panel="speech" hidden>
+    <div class="grid grid3 uniform-video-grid creative-demo-grid">
+        <div class="video-player audio-control" data-video-slot="creative-speech-1">
+            <video muted loop playsinline preload="none" src="videos/creative/speech/1.mp4?v=trim-10p48s-20261109"></video>
+        </div>
+        <div class="video-player audio-control" data-video-slot="creative-speech-2">
+            <video muted loop playsinline preload="none" src="videos/creative/speech/2.mp4?v=talk-man-0042"></video>
+        </div>
+    </div>
+                        </article>
+                        <article class="creative-panel" role="tabpanel" data-creative-panel="expression" hidden>
+                            <div class="grid grid3 uniform-video-grid creative-demo-grid">
+                                <div class="video-player audio-control" data-video-slot="creative-expression-1">
+                                    <video muted loop playsinline preload="none" src="videos/creative/expression/1.mp4?v=20261107-3-1"></video>
+                                </div>
+                                <div class="video-player audio-control" data-video-slot="creative-expression-2">
+                                    <video muted loop playsinline preload="none" src="videos/creative/expression/2.mp4?v=20261109"></video>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="creative-panel" role="tabpanel" data-creative-panel="live" hidden>
+                            <div class="grid grid3 uniform-video-grid creative-demo-grid">
+                                <div class="video-player audio-control" data-video-slot="creative-live-1">
+                                    <video muted loop playsinline preload="none" src="videos/creative/live/1.mp4?v=75-full"></video>
+                                </div>
+                                <div class="video-player audio-control" data-video-slot="creative-live-2">
+                                    <video muted loop playsinline preload="none" src="videos/creative/live/2.mp4?v=130-9x16-20261106"></video>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="creative-panel" role="tabpanel" data-creative-panel="animation" hidden>
+                            <div class="grid grid3 uniform-video-grid creative-demo-grid">
+                                <div class="video-player audio-control" data-video-slot="creative-animation-1">
+                                    <video muted loop playsinline preload="none" src="videos/creative/animation/1.mp4?v=animation-0521-wan-13p08s-20261109"></video>
+                                </div>
+                                <div class="video-player audio-control" data-video-slot="creative-animation-2">
+                                    <video muted loop playsinline preload="none" src="videos/creative/animation/2.mp4?v=animation-0521-wan1-26s-20261106"></video>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="creative-panel" role="tabpanel" data-creative-panel="interaction" hidden>
+                            <div class="grid grid3 uniform-video-grid creative-demo-grid">
+                                <div class="video-player audio-control" data-video-slot="creative-interaction-1">
+                                    <video muted loop playsinline preload="none" src="videos/creative/interaction/1.mp4?v=virtual-human-b2870da2-trim-5p6s"></video>
+                                </div>
+                                <div class="video-player audio-control" data-video-slot="creative-interaction-2">
+                                    <video muted loop playsinline preload="none" src="videos/creative/interaction/2.mp4?v=virtual-human-b2df6285-trim-4p8s"></video>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="version">
+                <div class="text">
+                    <h1>LongCat-Video-Avatar 1.5 vs. 1.6</h1>
+                    <p>
+                        Compare LongCat-Video-Avatar 1.5 and 1.6 under matched inputs, highlighting more natural speech-related mouth movements and reduced error accumulation during long-video generation.
+                    </p>
+                </div>
+        
+                <div class="grid2">
+                    <div class="version-block">
+                        <div class="video-player audio-control" data-video-slot="version-longcat-15">
+                            <video muted loop playsinline preload="none" src="videos/comparison_1.5/vc55_v1d5.mp4?v=20261106"></video>
+                            
+                        </div>
+                        <h2>LongCat-Video-Avatar 1.5</h2>
+                        <!-- <p>Baseline release for unified audio-driven avatar generation.</p> -->
+                    </div>
+                    <div class="version-block ours">
+                        <div class="video-player audio-control" data-video-slot="version-longcat-16">
+                            <video muted loop playsinline preload="none" src="videos/comparison_1.5/vc55_v1d6.mp4?v=20261106"></video>
+                            
+                        </div>
+                        <h2>LongCat-Video-Avatar 1.6</h2>
+                        <!-- <p>Upgraded release with Whisper-large audio encoding, per-frame optimization, and DMD acceleration.</p> -->
+                    </div>
+                </div>
+
+                <div class="grid2">
+                    <div class="version-block">
+                        <div class="video-player audio-control" data-video-slot="version-longcat-15-case2">
+                            <video muted loop playsinline preload="none" src="videos/comparison_1.5/vc69_v1d5.mp4?v=20261106"></video>
+                        </div>
+                        <h2>LongCat-Video-Avatar 1.5</h2>
+                    </div>
+                    <div class="version-block ours">
+                        <div class="video-player audio-control" data-video-slot="version-longcat-16-case2">
+                            <video muted loop playsinline preload="none" src="videos/comparison_1.5/vc69_v1d6.mp4?v=20261106"></video>
+                        </div>
+                        <h2>LongCat-Video-Avatar 1.6</h2>
+                    </div>
+                </div>
+
+                <div class="grid2 version-case3">
+                    <div class="version-block">
+                        <div class="video-player audio-control" data-video-slot="version-longcat-15-case3">
+                            <video muted loop playsinline preload="none" src="videos/comparison_1.5/case3_v1d5.mp4?v=trim-13s-20261109"></video>
+                        </div>
+                        <h2>LongCat-Video-Avatar 1.5</h2>
+                    </div>
+                    <div class="version-block ours">
+                        <div class="video-player audio-control" data-video-slot="version-longcat-16-case3">
+                            <video muted loop playsinline preload="none" src="videos/comparison_1.5/case3_v1d6.mp4?v=trim-13s-20261109"></video>
+                        </div>
+                        <h2>LongCat-Video-Avatar 1.6</h2>
+                    </div>
+                </div>
+
+                <div class="grid2 version-case4">
+                    <div class="version-block">
+                        <div class="video-player audio-control" data-video-slot="version-longcat-15-case4">
+                            <video muted loop playsinline preload="none" src="videos/comparison_1.5/case4_v1d5.mp4?v=trim-41s-20261109"></video>
+                        </div>
+                        <h2>LongCat-Video-Avatar 1.5</h2>
+                    </div>
+                    <div class="version-block ours">
+                        <div class="video-player audio-control" data-video-slot="version-longcat-16-case4">
+                            <video muted loop playsinline preload="none" src="videos/comparison_1.5/case4_v1d6.mp4?v=trim-41s-20261109"></video>
+                        </div>
+                        <h2>LongCat-Video-Avatar 1.6</h2>
+                    </div>
+                </div>
+
+                <!-- <div class="notes">
+                    <div class="note">
+                        <strong>Whisper-large Audio Encoder</strong>
+                        <span>Improves phoneme representation and helps produce more accurate, fluent mouth movements.</span>
+                    </div>
+                    <div class="note">
+                        <strong>Per-Frame Optimization</strong>
+                        <span>Refines audio-visual alignment frame by frame for stronger facial and lip consistency.</span>
+                    </div>
+                    <div class="note">
+                        <strong>Long-Video Robustness</strong>
+                        <span>Keeps identity, expression, and full-body motion stable across longer generated videos.</span>
+                    </div>
+                    <div class="note">
+                        <strong>DMD 8-Step Generation</strong>
+                        <span>Accelerates inference while preserving visual quality for more practical deployment.</span>
+                    </div>
+                </div> -->
+            </section>
+        
+            <section id="commercial">
+                <div class="text">
+                    <h1>Comparison with Other Methods</h1>
+                    <p>
+                        Compare LongCat-Video-Avatar 1.6 with OmniHuman-2.0, HeyGen, Kling Avatar 2.0, and OmniHuman-1.5 under the same inputs.
+                    </p>
+                </div>
+        
+                <div class="comparison-case">
+                    <div class="grid grid5 uniform-video-grid">
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-omnihuman2-54"><video muted loop playsinline preload="none" src="videos/comparison_other_model/omnihuman2_54.mp4"></video></div><h2>OmniHuman-2.0</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-heygen-54"><video muted loop playsinline preload="none" src="videos/comparison_other_model/heygen_54.mp4"></video></div><h2>HeyGen</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-kling-54"><video muted loop playsinline preload="none" src="videos/comparison_other_model/kling_54.mp4"></video></div><h2>Kling Avatar 2.0</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-omnihuman-54"><video muted loop playsinline preload="none" src="videos/comparison_other_model/omnihuman_54.mp4"></video></div><h2>OmniHuman-1.5</h2></div>
+                        <div class="comparison-card ours"><div class="video-player audio-control" data-video-slot="commercial-longcat-54"><video muted loop playsinline preload="none" src="videos/comparison_other_model/longcat_54.mp4"></video></div><h2>LongCat-Video-Avatar 1.6</h2></div>
+                    </div>
+                </div>
+
+                <div class="comparison-case">
+                    <div class="grid grid5 uniform-video-grid">
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-omnihuman2-64"><video muted loop playsinline preload="none" src="videos/comparison_other_model/omnihuman2_64.mp4"></video></div><h2>OmniHuman-2.0</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-heygen-64"><video muted loop playsinline preload="none" src="videos/comparison_other_model/heygen_64.mp4"></video></div><h2>HeyGen</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-kling-64"><video muted loop playsinline preload="none" src="videos/comparison_other_model/kling_64.mp4"></video></div><h2>Kling Avatar 2.0</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-omnihuman-64"><video muted loop playsinline preload="none" src="videos/comparison_other_model/omnihuman_64.mp4"></video></div><h2>OmniHuman-1.5</h2></div>
+                        <div class="comparison-card ours"><div class="video-player audio-control" data-video-slot="commercial-longcat-64"><video muted loop playsinline preload="none" src="videos/comparison_other_model/longcat_64.mp4"></video></div><h2>LongCat-Video-Avatar 1.6</h2></div>
+                    </div>
+                </div>
+
+                <div class="comparison-case">
+                    <div class="grid grid5 uniform-video-grid">
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-omnihuman2-77"><video muted loop playsinline preload="none" src="videos/comparison_other_model/omnihuman2_77.mp4"></video></div><h2>OmniHuman-2.0</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-heygen-77"><video muted loop playsinline preload="none" src="videos/comparison_other_model/heygen_77.mp4"></video></div><h2>HeyGen</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-kling-77"><video muted loop playsinline preload="none" src="videos/comparison_other_model/kling_77.mp4"></video></div><h2>Kling Avatar 2.0</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-omnihuman-77"><video muted loop playsinline preload="none" src="videos/comparison_other_model/omnihuman_77.mp4"></video></div><h2>OmniHuman-1.5</h2></div>
+                        <div class="comparison-card ours"><div class="video-player audio-control" data-video-slot="commercial-longcat-77"><video muted loop playsinline preload="none" src="videos/comparison_other_model/longcat_77.mp4"></video></div><h2>LongCat-Video-Avatar 1.6</h2></div>
+                    </div>
+                </div>
+
+                <div class="comparison-case">
+                    <div class="grid grid5 uniform-video-grid">
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-omnihuman2-98"><video muted loop playsinline preload="none" src="videos/comparison_other_model/omnihuman2_98.mp4"></video></div><h2>OmniHuman-2.0</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-heygen-98"><video muted loop playsinline preload="none" src="videos/comparison_other_model/heygen_98.mp4"></video></div><h2>HeyGen</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-kling-98"><video muted loop playsinline preload="none" src="videos/comparison_other_model/kling_98.mp4"></video></div><h2>Kling Avatar 2.0</h2></div>
+                        <div class="comparison-card"><div class="video-player audio-control" data-video-slot="commercial-omnihuman-98"><video muted loop playsinline preload="none" src="videos/comparison_other_model/omnihuman_98.mp4"></video></div><h2>OmniHuman-1.5</h2></div>
+                        <div class="comparison-card ours"><div class="video-player audio-control" data-video-slot="commercial-longcat-98"><video muted loop playsinline preload="none" src="videos/comparison_other_model/longcat_98.mp4"></video></div><h2>LongCat-Video-Avatar 1.6</h2></div>
+                    </div>
+                </div>
+        
+            </section>
+            <section id="team">
+                <div class="content">
+                    <h1 class="title is-3">Ethical Considerations</h1>
+                    <p> Part of images and audios are derived from real videos solely to demonstrate the capabilities of this research, e.g., expressions, gestures, and naturalness. 
+                        The generated content is for academic use only and commercial use is not permitted. If there are any concerns, please contact us 
+                        (zhangyong202303@gmail.com) and we will delete it in time.</p>
+                </div>
+            </section>
+
+        <script>
+            // Lazy load
+            const lazyLoadObserver = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.play();
+                    } else {
+                        entry.target.pause();
+                    }
+                });
+            }, {rootMargin: '500px'});
+            document.querySelectorAll("video:not(.no-autoplay)").forEach(video => {
+                lazyLoadObserver.observe(video);
+                video.addEventListener("pointerdown", () => video.play());
+            });
+
+            // Audio control
+            const body = document.querySelector("body");
+            let globalmuted = true;
+            const isNarrow = () => window.innerWidth < 512;
+            document.querySelectorAll(".audio-control").forEach(wrapper => {
+                const video = wrapper.querySelector("video");
+                const button = document.createElement("div");
+
+                button.className = "audio-button";
+                button.onclick = function() {
+                    globalmuted = !globalmuted;
+                    video.muted = globalmuted;
+                    body.setAttribute("muted", globalmuted);
+                }
+                wrapper.addEventListener("mouseenter", () => {if (!isNarrow()) {video.muted = globalmuted}});
+                wrapper.addEventListener("mouseleave", () => {if (!isNarrow()) {video.muted = true}});
+                wrapper.appendChild(button);
+            });
+            document.querySelectorAll(".audio-button-mobile").forEach(button => {
+                button.onclick = () => {
+                    globalmuted = !globalmuted;
+                    body.setAttribute("muted", globalmuted);
+                    document.querySelectorAll(".audio-control video").forEach(video => {
+                        video.muted = globalmuted || !video.isIntersecting;
+                    });
+                }
+            });
+
+            const audioObserver = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    const video = entry.target;
+                    if (isNarrow()) {
+                        video.muted = globalmuted || !entry.isIntersecting;
+                    }
+                    video.isIntersecting = entry.isIntersecting;
+                });
+            }, {threshold: 0.8});
+            document.querySelectorAll(".audio-control video").forEach(video => audioObserver.observe(video));
+
+            // progress bar.
+            document.querySelectorAll(".duration-indicator").forEach((wrapper) => {
+                const video = wrapper.querySelector("video");
+                const bar = document.createElement("div");
+                const barinner = document.createElement("div");
+                const time = document.createElement("div");
+
+                bar.className = "bar";
+                barinner.className = "barinner";
+                time.className = "time";
+
+                wrapper.appendChild(bar);
+                bar.appendChild(barinner);
+                wrapper.appendChild(time);
+
+                function format(seconds) {
+                    seconds = Math.round(seconds);
+                    const minutes = Math.floor(seconds / 60);
+                    seconds = seconds - (minutes * 60);
+                    seconds = String(seconds);
+                    seconds = seconds.length > 1 ? seconds : "0" + seconds;
+                    return `${minutes}:${seconds}`;
+                }
+
+                function update() {
+                    if (!isNaN(video.duration)) {
+                        barinner.style.width = `${video.currentTime / video.duration * 100}%`;
+                        time.innerText = `${format(video.currentTime)} / ${format(video.duration)}`;
+                    } else {
+                        time.innerText = "";
+                    }
+                    requestAnimationFrame(update);
+                }
+                requestAnimationFrame(update);
+            })
+
+            const shotsVideo = document.querySelector("#shots video");
+            const shotList = document.querySelector("#shots .shots-list");
+            const shotListItems = document.querySelectorAll("#shots .shots-list > div");
+            const shotTimesteps = Array.from(shotListItems).map(element => parseInt(element.getAttribute("timestep")));
+
+            if (shotsVideo && shotList && shotListItems.length > 0) {
+                shotListItems.forEach(element => {
+                    element.addEventListener("click", () => {
+                        const timestep = parseInt(element.getAttribute("timestep"));
+                        shotsVideo.currentTime = timestep;
+                    });
+                });
+
+                let lastShot = null;
+                shotsVideo.addEventListener("timeupdate", () => {
+                    const currentTime = shotsVideo.currentTime;
+                    const currentShot = shotTimesteps.findLastIndex(x => x < currentTime + 0.5);
+                    if (currentShot != lastShot) {
+                        if (lastShot != null) {
+                            shotListItems[lastShot].removeAttribute("selected");
+                        }
+                        shotListItems[currentShot].setAttribute("selected", true);
+                        if (isNarrow() && Math.abs(shotList.scrollLeft - shotListItems[currentShot].offsetLeft) < 500) {
+                            shotList.scrollTo({
+                                left: shotListItems[currentShot].offsetLeft,
+                                behavior: "smooth"
+                            });
+                        }
+                        lastShot = currentShot;
+                    }
+                })
+            }
+
+            document.addEventListener("scroll", () => {
+                const top = Math.max(Math.min(window.scrollY / 200, 1), 0);
+                document.documentElement.style.setProperty('--intro-scale', top)
+            })
+
+            document.querySelectorAll(".video-slider").forEach((slider) => {
+                // slider
+                const sliderButton = slider.querySelector(".slider");
+                const sliderVideo1 = slider.querySelector(".video1");
+                let sliding = false;
+                let slidePosition = 0.5;
+                let lastPointerX = null;
+                let lastSlidePosition = null;
+                sliderButton.addEventListener("pointerdown", e => {
+                    sliding = true;
+                    lastPointerX = e.clientX || e.touches[0].clientX;
+                    lastSlidePosition = sliderButton.offsetLeft;
+                    sliderButton.style.opacity = 1;
+                });
+                function handlemove(e) {
+                    if (sliding) {
+                        e.preventDefault();
+                        let clientX = e.clientX || e.touches[0].clientX;
+                        let deltaX = clientX - lastPointerX;
+                        let ratio = (lastSlidePosition + deltaX) / slider.offsetWidth;
+                        ratio = Math.min(Math.max(ratio, 0.01), 0.99);
+                        sliderButton.style.left = `${ratio * 100}%`;
+                        sliderVideo1.style.width = `${ratio * 100}%`;
+                    }
+                }
+                document.addEventListener("mousemove", handlemove);
+                document.addEventListener("touchmove", handlemove, {passive: false});
+                document.addEventListener("pointermove", handlemove, {passive: false});
+                document.addEventListener("pointerup", () => {
+                    sliding = false;
+                    sliderButton.style.opacity = null;
+                });
+
+                // sync video.
+                const video1 = slider.querySelector(".video1 video");
+                const video2 = slider.querySelector(".video2 video");
+                function sync() {
+                    if (Math.abs(video2.currentTime - video1.currentTime) > 1 / 24) {
+                        video2.currentTime = video1.currentTime;
+                    }
+                    requestAnimationFrame(sync);
+                }
+                requestAnimationFrame(sync);
+
+                // full screen.
+                const fullscreenButton = slider.querySelector(".fullscreen");
+                if (!document.fullscreenEnabled) {
+                    fullscreenButton.remove();
+                } else {
+                    fullscreenButton.addEventListener("click", () => {
+                        if (!document.fullscreenElement) {
+                            slider.requestFullscreen();
+                            body.setAttribute("fullscreen", true);
+                        } else {
+                            document.exitFullscreen();
+                        }
+                    })
+                }
+            })
+            document.addEventListener("fullscreenchange", () => {
+                if (document.fullscreenElement != null) {
+                    body.setAttribute("fullscreen", "");
+                } else {
+                    body.removeAttribute("fullscreen");
+                }
+            });
+
+
+            // features film
+            document.querySelectorAll(".feature-video").forEach(featureVideo => {
+                const video = featureVideo.querySelector("video.final-video");
+                if (!video) return;
+                featureVideo.addEventListener("click", e => {
+                    video.currentTime = 0;
+                    video.play();
+                    video.requestFullscreen();
+                    video.style.opacity = 1;
+                })
+                video.addEventListener("fullscreenchange", () => {
+                    if (!document.fullscreenElement) {
+                        video.pause();
+                        video.style.opacity = 0;
+                    }
+                })
+                video.addEventListener("ended", () => {
+                    video.pause();
+                    video.style.opacity = 0;
+                    document.exitFullscreen();
+                })
+            });
+
+            document.querySelectorAll(".page-control").forEach(controller => {
+                controller.querySelectorAll(".page-select > div").forEach(selector => {
+                    selector.addEventListener("click", () => {
+                        const oldSelector = controller.querySelector(".page-select > div[selected=true]");
+                        if (selector != oldSelector) {
+                            selector.setAttribute("selected", "true");
+                            oldSelector.setAttribute("selected", "false");
+                            
+                            const newTarget = selector.getAttribute("target");
+                            const oldTarget = oldSelector.getAttribute("target");
+
+                            const newPage = controller.querySelector(`.page-content > div[page=${newTarget}]`);
+                            const oldPage = controller.querySelector(`.page-content > div[page=${oldTarget}]`);
+
+                            const oldPageScrollLeft = oldPage.scrollLeft;
+
+                            newPage.setAttribute("selected", "true");
+                            oldPage.setAttribute("selected", "false");
+
+                            newPage.querySelectorAll("video").forEach(video => {
+                                video.currentTime = 0;
+                                video.play();
+                            });
+
+                            oldPage.querySelectorAll("video").forEach(video => {
+                                video.pause();
+                            });
+
+                            newPage.scrollLeft = oldPageScrollLeft;
+                        }
+                    })
+                })
+            })
+let longVideoPlaybackRate = 1;
+
+function formatVideoTime(seconds) {
+    if (!Number.isFinite(seconds)) return '--:--';
+    const totalSeconds = Math.max(0, Math.floor(seconds));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainingSeconds = String(totalSeconds % 60).padStart(2, '0');
+    return hours > 0
+        ? `${hours}:${String(minutes).padStart(2, '0')}:${remainingSeconds}`
+        : `${minutes}:${remainingSeconds}`;
+}
+
+function initCreativeShowcase() {
+    const section = document.getElementById('creative-showcase');
+    if (!section) return;
+    const parts = Array.from(section.querySelectorAll('[data-creative-part]'));
+    const panels = Array.from(section.querySelectorAll('[data-creative-panel]'));
+
+    panels.forEach(panel => {
+        const track = panel.querySelector('.creative-demo-grid');
+        const items = track ? Array.from(track.querySelectorAll('.video-player')) : [];
+        if (!track || items.length < 2) return;
+
+        const slider = document.createElement('div');
+        slider.className = 'creative-slider';
+        track.before(slider);
+        slider.append(track);
+
+        const prev = document.createElement('button');
+        const next = document.createElement('button');
+        prev.className = 'creative-nav prev';
+        next.className = 'creative-nav next';
+        prev.type = next.type = 'button';
+        prev.setAttribute('aria-label', 'Previous video');
+        next.setAttribute('aria-label', 'Next video');
+        prev.textContent = '‹';
+        next.textContent = '›';
+        slider.append(prev, next);
+
+        let currentIndex = 0;
+        const updateNav = () => {
+            currentIndex = items.reduce((closest, item, index) =>
+                Math.abs(item.offsetLeft - track.scrollLeft) < Math.abs(items[closest].offsetLeft - track.scrollLeft)
+                    ? index : closest, 0);
+            prev.disabled = currentIndex === 0;
+            next.disabled = currentIndex === items.length - 1;
+        };
+        const goTo = index => {
+            currentIndex = Math.max(0, Math.min(items.length - 1, index));
+            track.scrollTo({ left: items[currentIndex].offsetLeft, behavior: 'smooth' });
+            prev.disabled = currentIndex === 0;
+            next.disabled = currentIndex === items.length - 1;
+        };
+        prev.addEventListener('click', () => goTo(currentIndex - 1));
+        next.addEventListener('click', () => goTo(currentIndex + 1));
+        track.addEventListener('scroll', updateNav, { passive: true });
+        updateNav();
+    });
+
+    parts.forEach(part => part.addEventListener('click', () => {
+        const selected = part.dataset.creativePart;
+        parts.forEach(item => item.setAttribute('aria-selected', item === part ? 'true' : 'false'));
+        panels.forEach(panel => {
+            const active = panel.dataset.creativePanel === selected;
+            panel.hidden = !active;
+            if (!active) panel.querySelectorAll('video').forEach(video => video.pause());
+            if (active) requestAnimationFrame(() => panel.querySelector('.creative-demo-grid')?.dispatchEvent(new Event('scroll')));
+        });
+    }));
+}
+
+function initLongVideoControls() {
+    document.querySelectorAll('.long-video-player').forEach(player => {
+        if (player.dataset.controlsReady === 'true') return;
+
+        const video = player.querySelector('video');
+        const time = player.querySelector('.long-video-time');
+        const speed = player.querySelector('.long-video-speed');
+        if (!video || !time || !speed) return;
+
+        const updateTime = () => {
+            time.textContent = `${formatVideoTime(video.currentTime)} / ${formatVideoTime(video.duration)}`;
+        };
+
+        speed.value = String(longVideoPlaybackRate);
+        video.playbackRate = longVideoPlaybackRate;
+        video.addEventListener('loadedmetadata', updateTime);
+        video.addEventListener('durationchange', updateTime);
+        video.addEventListener('timeupdate', updateTime);
+        video.addEventListener('ended', updateTime);
+        speed.addEventListener('change', () => {
+            longVideoPlaybackRate = Number(speed.value);
+            document.querySelectorAll('.long-video-player video').forEach(item => {
+                item.playbackRate = longVideoPlaybackRate;
+            });
+            document.querySelectorAll('.long-video-speed').forEach(item => {
+                item.value = String(longVideoPlaybackRate);
+            });
+        });
+
+        updateTime();
+        player.dataset.controlsReady = 'true';
+    });
+}
+
+// Carousel functionality
+function initCarousel(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const track = container.querySelector('.carousel-track');
+    const items = Array.from(track.querySelectorAll('.carousel-item'));
+    if (!items.length) return;
+
+    const firstClone = items[0].cloneNode(true);
+    const lastClone = items[items.length - 1].cloneNode(true);
+    firstClone.classList.add('carousel-clone');
+    lastClone.classList.add('carousel-clone');
+    track.insertBefore(lastClone, items[0]);
+    track.appendChild(firstClone);
+
+    const slideItems = Array.from(track.querySelectorAll('.carousel-item'));
+    const prevBtn = container.querySelector('.carousel-nav.prev');
+    const nextBtn = container.querySelector('.carousel-nav.next');
+    const captionDiv = container.querySelector('.carousel-caption');
+    const dotsContainer = container.querySelector('.carousel-dots');
+    
+    let currentIndex = 0;
+    let currentSlideIndex = 1;
+    let isAnimating = false;
+
+    function getRealIndex(slideIndex) {
+        if (slideIndex === 0) return items.length - 1;
+        if (slideIndex === slideItems.length - 1) return 0;
+        return slideIndex - 1;
+    }
+
+    function markVideoOrientation(video) {
+        const player = video.closest('.video-player');
+        if (!player || !video.videoWidth || !video.videoHeight) return;
+        player.classList.toggle('video-portrait', video.videoHeight > video.videoWidth);
+    }
+
+    slideItems.forEach(item => {
+        item.querySelectorAll('video').forEach(video => {
+            if (video.readyState >= 1) {
+                markVideoOrientation(video);
+            } else {
+                video.addEventListener('loadedmetadata', () => markVideoOrientation(video), { once: true });
+            }
+        });
+    });
+    
+    // Create dots
+    items.forEach((_, index) => {
+        const dot = document.createElement('div');
+        dot.className = 'carousel-dot';
+        if (index === 0) dot.classList.add('active');
+        dot.addEventListener('click', () => goToSlide(index));
+        dotsContainer.appendChild(dot);
+    });
+    
+    const dots = Array.from(dotsContainer.querySelectorAll('.carousel-dot'));
+    
+    function updateCarousel(animate = true) {
+        currentIndex = getRealIndex(currentSlideIndex);
+        track.style.transition = animate ? '' : 'none';
+
+        // Calculate offset to center the active item
+// 获取当前选中的元素
+        const activeItem = slideItems[currentSlideIndex];
+        
+        // 1. 获取容器的中心点坐标
+        const containerCenter = container.offsetWidth / 2;
+        
+        // 2. 获取当前 Item 的中心点（相对于 track 的左侧距离 + 自身宽度的一半）
+        // offsetLeft 是元素距离父级(track)左边的距离
+        const itemCenter = activeItem.offsetLeft + (activeItem.offsetWidth / 2);
+        
+        // 3. 计算需要移动的距离：容器中心 - 元素中心
+        // 这样可以将元素的中心点与容器的中心点对齐
+        const offset = containerCenter - itemCenter;
+
+        track.style.transform = `translateX(${offset}px)`;
+
+        if (!animate) {
+            track.offsetHeight;
+            track.style.transition = '';
+        }
+        
+        // Update active states
+        slideItems.forEach((item, index) => {
+            if (index === currentSlideIndex) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+        
+        // Update dots
+        dots.forEach((dot, index) => {
+            if (index === currentIndex) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+        
+        // Update caption
+        const currentCaption = items[currentIndex].getAttribute('data-caption');
+        captionDiv.innerHTML = `<p class="active">${currentCaption}</p>`;
+        
+        // Play current video
+        const currentVideo = slideItems[currentSlideIndex].querySelector('video');
+        if (currentVideo) {
+            currentVideo.currentTime = 0;
+            currentVideo.play();
+        }
+        
+        // Pause other videos
+        slideItems.forEach((item, index) => {
+            if (index !== currentSlideIndex) {
+                const video = item.querySelector('video');
+                if (video) video.pause();
+            }
+        });
+    }
+    
+    function goToSlide(index) {
+        currentIndex = ((index % items.length) + items.length) % items.length;
+        currentSlideIndex = currentIndex + 1;
+        updateCarousel();
+    }
+    
+    function nextSlide() {
+        if (isAnimating) return;
+        isAnimating = true;
+        currentSlideIndex += 1;
+        updateCarousel();
+    }
+    
+    function prevSlide() {
+        if (isAnimating) return;
+        isAnimating = true;
+        currentSlideIndex -= 1;
+        updateCarousel();
+    }
+
+    track.addEventListener('transitionend', (e) => {
+        if (e.target !== track || e.propertyName !== 'transform') return;
+
+        if (currentSlideIndex === slideItems.length - 1) {
+            currentSlideIndex = 1;
+            updateCarousel(false);
+        }
+
+        if (currentSlideIndex === 0) {
+            currentSlideIndex = items.length;
+            updateCarousel(false);
+        }
+
+        isAnimating = false;
+    });
+    
+    // Event listeners
+    prevBtn.addEventListener('click', prevSlide);
+    nextBtn.addEventListener('click', nextSlide);
+    
+    // Mouse wheel support
+    let lastWheelSlideAt = 0;
+    const wheelSlideCooldown = 260;
+    const wheelSlideThreshold = 18;
+
+    container.addEventListener('wheel', (e) => {
+        const absDeltaX = Math.abs(e.deltaX);
+        const absDeltaY = Math.abs(e.deltaY);
+        const mainDelta = absDeltaX > absDeltaY ? e.deltaX : e.deltaY;
+
+        if (Math.abs(mainDelta) < wheelSlideThreshold) return;
+
+        const now = Date.now();
+        if (now - lastWheelSlideAt < wheelSlideCooldown) return;
+
+        e.preventDefault();
+        lastWheelSlideAt = now;
+
+        if (mainDelta > 0) {
+            nextSlide();
+        } else {
+            prevSlide();
+        }
+    }, { passive: false });
+    
+    // Touch support
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const touchSlideThreshold = 100;
+    
+    container.addEventListener('touchstart', (e) => {
+        if (e.target.closest('video, .long-video-controls')) {
+            touchStartX = null;
+            return;
+        }
+        touchStartX = e.changedTouches[0].screenX;
+    });
+    
+    container.addEventListener('touchend', (e) => {
+        if (touchStartX === null || e.target.closest('video, .long-video-controls')) return;
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    });
+    
+    function handleSwipe() {
+        if (touchEndX < touchStartX - touchSlideThreshold) {
+            nextSlide();
+        }
+        if (touchEndX > touchStartX + touchSlideThreshold) {
+            prevSlide();
+        }
+    }
+    
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+        const rect = container.getBoundingClientRect();
+        const isInView = rect.top < window.innerHeight && rect.bottom > 0;
+        
+        if (isInView) {
+            if (e.key === 'ArrowLeft') {
+                prevSlide();
+            } else if (e.key === 'ArrowRight') {
+                nextSlide();
+            }
+        }
+    });
+    
+    // Initialize
+    updateCarousel();
+    
+    // Update on window resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            updateCarousel();
+        }, 250);
+    });
+}
+
+// Initialize both carousels
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.video-player video').forEach(video => {
+        const markOrientation = () => {
+            const player = video.closest('.video-player');
+            if (!player || !video.videoWidth || !video.videoHeight) return;
+            player.classList.toggle('video-portrait', video.videoHeight > video.videoWidth);
+        };
+
+        if (video.readyState >= 1) {
+            markOrientation();
+        } else {
+            video.addEventListener('loadedmetadata', markOrientation, { once: true });
+        }
+    });
+
+    initCarousel('carousel-stability');
+    initCreativeShowcase();
+    initLongVideoControls();
+});
+
+        </script>
+    <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"944e28ba3a2961e3","version":"2025.4.0-1-g37f21b1","r":1,"token":"8591086b57754c278d4db02301f960eb","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
+
+<!--   python3 -m http.server 8025 -->
