@@ -4,7 +4,7 @@
 
 <div align="center" style="line-height: 1;">
   <a href='https://meigen-ai.github.io/LongCat-Video-Avatar-1.6-Page'><img src='https://img.shields.io/badge/Project-Page-green'></a>
-  <a href='https://arxiv.org/abs/2605.26486'><img src='https://img.shields.io/badge/Technique-Report-red'></a>
+  <a href='https://github.com/meituan-longcat/LongCat-Video/blob/main/assets/LongCat-Video-Avatar-1.6-Tech-Report.pdf'><img src='https://img.shields.io/badge/Technique-Report-red'></a>
   <a href='https://github.com/meituan-longcat/LongCat-Video'><img src='https://img.shields.io/badge/Code-GitHub-black?logo=github'></a>
   <a href='https://huggingface.co/meituan-longcat/LongCat-Video-Avatar-1.6'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue'></a>
 </div>
